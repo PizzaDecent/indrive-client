@@ -10,7 +10,7 @@ RUN npm ci
 COPY . .
 
 RUN npm run lint && \
-    npm run build:prod
+    npm run build
 
 # Prod
 FROM nginx:stable as prod
