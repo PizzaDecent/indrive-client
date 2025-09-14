@@ -25,64 +25,79 @@ export default function Index() {
 
     const handleScanComplete = async () => {
         if (!uploadedFile || !uploadedImage) {
-            setError('Файл не найден');
+            setError("Файл не найден");
             setIsScanning(false);
             return;
         }
 
         try {
             const startTime = Date.now();
-
-            // Prepare form data for API
             const formData = new FormData();
-            formData.append('file', uploadedFile);
+            formData.append("file", uploadedFile);
 
-            // Call the dental API
-            const response = await fetch('https://dentapi.nixlavr.ru/predict', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'accept': 'application/json',
-                },
-            });
+            let response: Response | null = null;
 
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            // 1. Пытаемся сходить на локальный API
+            try {
+                response = await fetch("http://localhost:8000/predict", {
+                    method: "POST",
+                    body: formData,
+                    headers: { accept: "application/json" },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Localhost error: ${response.status} ${response.statusText}`);
+                }
+            } catch (localErr) {
+                console.warn("Localhost недоступен, пробуем внешний API:", localErr);
+
+                // 2. Фоллбек на удалённый API
+                response = await fetch("https://dentapi.nixlavr.ru/predict", {
+                    method: "POST",
+                    body: formData,
+                    headers: { accept: "application/json" },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Remote API error: ${response.status} ${response.statusText}`);
+                }
             }
 
+            // 3. Парсим результат
             const detections: Detection[] = await response.json();
             const processingTime = Date.now() - startTime;
 
             const result: ScanResult = {
                 detections: detections || [],
                 imageUrl: uploadedImage,
-                processingTime
+                processingTime,
             };
 
             setScanResult(result);
             setError(null);
         } catch (err) {
-            console.error('API Error:', err);
-            setError(err instanceof Error ? err.message : 'Произошла ошибка при анализе изображения');
+            console.error("API Error:", err);
+            setError(err instanceof Error ? err.message : "Произошла ошибка при анализе изображения");
 
-            // Fallback to mock data for demo purposes
+            // fallback mock
             const mockResult: ScanResult = {
                 detections: [
                     {
-                        type: 'broken_part',
+                        type: "broken_part",
                         confidence: 53.61,
                         box: [207.32, 29.64, 294.54, 60.52],
-                        area: 2692.99
-                    }
+                        area: 2692.99,
+                    },
                 ],
                 imageUrl: uploadedImage,
-                processingTime: 1500
+                processingTime: 1500,
             };
             setScanResult(mockResult);
         } finally {
             setIsScanning(false);
         }
     };
+
 
     const handleNewScan = () => {
         setUploadedImage(null);
