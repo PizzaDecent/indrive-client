@@ -15,5 +15,5 @@ RUN npm run lint && \
 # Prod
 FROM nginx:stable as prod
 
-COPY --from=build /usr/src/app/dist/ksp-deltav-planner /usr/share/nginx/html
+COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
