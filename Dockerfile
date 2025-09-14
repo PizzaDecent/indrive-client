@@ -1,16 +1,19 @@
+# Build
+FROM node:lts-alpine as build
 
-FROM node:18-alpine
+WORKDIR /usr/src/app
 
-WORKDIR /app
+COPY package*.json ./
 
-COPY package.json .
-
-RUN npm install
+RUN npm ci
 
 COPY . .
 
-RUN npm run build
+RUN npm run lint && \
+    npm run build:prod
 
-EXPOSE 4173
+# Prod
+FROM nginx:stable as prod
 
-CMD [ "npm", "run", "preview" ]
+COPY --from=build /usr/src/app/dist/ksp-deltav-planner /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
